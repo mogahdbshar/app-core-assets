@@ -15,11 +15,24 @@ SECRET_KEY = b'MySecretKeyForIPTVChannels4000!!'
 IV = b'16BytesLongIV!!!'
 
 def parse_m3u(url):
-    print("جاري محاولة جلب القنوات من الرابط...")
+    print("جاري محاولة جلب القنوات بالهوية الجديدة المموّهة...")
+    
+    # إضافة هيدرز تماثل متصفح حقيقي وتطبيق ذكي لمنع الحظر 461
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': '*/*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Connection': 'keep-alive'
+    }
+    
     try:
-        response = requests.get(url, timeout=60)
-        print(f"استجابة سيرفر القنوات: {response.status_code}")
-        if response.status_code != 200: return None
+        # إرسال الطلب بالهوية المزورة
+        response = requests.get(url, headers=headers, timeout=60)
+        print(f"استجابة سيرفر القنوات بعد التمويه: {response.status_code}")
+        
+        if response.status_code != 200: 
+            print("السيرفر لا يزال يرفض الطلب. قد يتطلب الأمر ريكويست مخصص للاكستريم API.")
+            return None
         
         lines = response.text.split('\n')
         channels = []
@@ -49,12 +62,12 @@ def encrypt_data(data):
 
 channels_list = parse_m3u(M3U_URL)
 if channels_list:
-    print(f"تم العثور على {len(channels_list)} قناة. جاري التشفير والرفع...")
+    print(f"🔥 نجاح! تم العثور على {len(channels_list)} قناة. جاري التشفير والرفع...")
     encrypted_text = encrypt_data(channels_list)
     url = f"https://api.github.com/repos/{REPO}/contents/{FILE_PATH}"
-    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+    gh_headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
-    res = requests.get(url, headers=headers)
+    res = requests.get(url, headers=gh_headers)
     sha = res.json().get('sha') if res.status_code == 200 else None
     
     payload = {
@@ -63,9 +76,11 @@ if channels_list:
     }
     if sha: payload["sha"] = sha
     
-    upload_res = requests.put(url, json=payload, headers=headers)
+    upload_res = requests.put(url, json=payload, headers=gh_headers)
     print(f"استجابة جيثب عند الرفع: {upload_res.status_code}")
-    if upload_res.status_code not in [200, 201]:
+    if upload_res.status_code in [200, 201]:
+        print("✅ تم إنشاء وتحديث ملف system_config.dat بنجاح!")
+    else:
         print(f"تفاصيل الخطأ من جيثب: {upload_res.text}")
 else:
-    print("❌ لم يتم العثور على أي قنوات داخل الرابط! تأكد من أن الرابط يعمل حالياً.")
+    print("❌ فشل جلب البيانات بالرغم من محاولة التمويه.")
