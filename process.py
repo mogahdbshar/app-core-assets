@@ -6,19 +6,21 @@ import re
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
 
-# جلب البيانات الحساسة من خزنة جيثب السرية تلقائياً
 M3U_URL = os.environ.get("IPTV_URL")
 GITHUB_TOKEN = os.environ.get("GH_TOKEN")
-REPO = os.environ.get("GITHUB_REPOSITORY") # يقرأ اسم حسابك ومستودعك تلقائياً
+REPO = os.environ.get("GITHUB_REPOSITORY")
 FILE_PATH = "system_config.dat"
 
 SECRET_KEY = b'MySecretKeyForIPTVChannels4000!!' 
 IV = b'16BytesLongIV!!!'
 
 def parse_m3u(url):
+    print("جاري محاولة جلب القنوات من الرابط...")
     try:
         response = requests.get(url, timeout=60)
+        print(f"استجابة سيرفر القنوات: {response.status_code}")
         if response.status_code != 200: return None
+        
         lines = response.text.split('\n')
         channels = []
         current_ch = {}
@@ -37,7 +39,7 @@ def parse_m3u(url):
                 current_ch = {}
         return channels
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"خطأ في قراءة الرابط: {e}")
         return None
 
 def encrypt_data(data):
@@ -47,15 +49,23 @@ def encrypt_data(data):
 
 channels_list = parse_m3u(M3U_URL)
 if channels_list:
+    print(f"تم العثور على {len(channels_list)} قناة. جاري التشفير والرفع...")
     encrypted_text = encrypt_data(channels_list)
     url = f"https://api.github.com/repos/{REPO}/contents/{FILE_PATH}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+    
     res = requests.get(url, headers=headers)
     sha = res.json().get('sha') if res.status_code == 200 else None
+    
     payload = {
         "message": "Auto Sync Config",
         "content": base64.b64encode(encrypted_text.encode('utf-8')).decode('utf-8'),
     }
     if sha: payload["sha"] = sha
-    requests.put(url, json=payload, headers=headers)
-    print("Done! Data Encrypted and Saved.")
+    
+    upload_res = requests.put(url, json=payload, headers=headers)
+    print(f"استجابة جيثب عند الرفع: {upload_res.status_code}")
+    if upload_res.status_code not in [200, 201]:
+        print(f"تفاصيل الخطأ من جيثب: {upload_res.text}")
+else:
+    print("❌ لم يتم العثور على أي قنوات داخل الرابط! تأكد من أن الرابط يعمل حالياً.")
