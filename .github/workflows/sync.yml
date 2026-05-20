@@ -1,0 +1,27 @@
+name: IPTV Secure Sync
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # سيعمل تلقائياً كل 6 ساعات لتحديث القنوات والشعارات
+  workflow_dispatch: # يتيح لك تشغيله يدوياً بأي وقت بضغطة زر
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-python-version: '3.x'
+
+    - name: Install Dependencies
+      run: pip install requests pycryptodome
+
+    - name: Run Processing and Encryption
+      env:
+        IPTV_URL: ${{ secrets.IPTV_URL }}
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      run: python process.py
