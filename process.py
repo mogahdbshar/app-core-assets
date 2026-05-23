@@ -16,12 +16,63 @@ FILE_PATH = "system_config.dat"
 SECRET_KEY = b'MySecretKeyForIPTVChannels4000!!' 
 IV = b'16BytesLongIV!!!'
 
+# قائمة الكلمات المفتاحية للقنوات العربية + الرياضية المهمة
+ARABIC_KEYWORDS = [
+    # القنوات الرياضية المهمة (أضفتها في البداية عشان الأولوية)
+    'ssc', 'ssc1', 'ssc2', 'ssc3', 'ssc4', 'ssc5', 'ssc sport', 'ssc sports', 'الرياضية السعودية',
+    'beIN', 'be in', 'bein', 'بي ان', 'بي إن', 'beIN Sports', 'bein sport',
+    'الكاس', 'alkass', 'al cass', 'الكأس',
+    'admiral', 'أدميرال',
+    'koora', 'كورة',
+    'رياضة', 'sports',
+    
+    # القنوات العربية العامة
+    'ال', 'العربية', 'مصر', 'السعودية', 'الإمارات', 'الكويت', 'قطر', 'البحرين', 'عمان', 'الاردن', 
+    'فلسطين', 'لبنان', 'سوريا', 'العراق', 'المغرب', 'الجزائر', 'تونس', 'ليبيا', 'السودان', 'اليمن',
+    'mbc', 'mbc1', 'mbc2', 'mbc3', 'mbc4', 'mbc5', 'mbc action', 'mbc max', 'mbc drama',
+    'روتانا', 'art', 'الجزيرة', 'الحدث', 'سكاي نيوز', 'العربية الحدث', 'cnn عربية',
+    'فرانس', 'بي بي سي', 'bbc عربية', 'العاصمة', 'الحرة', 'الغد', 'الميادين', 'المنار',
+    'دبي', 'أبو ظبي', 'الشارقة', 'عجمان', 'رأس الخيمة', 'الفجيرة', 'بينونة', 
+    'النيل', 'الحياة', 'on', 'dmc', 'ten', 'المحور', 'القاهرة', 'النهار',
+    'lbc', 'mtv', 'otv', 'nbn', 'تلفزيون لبنان',
+    'العراقية', 'الرشيد', 'الموصلية', 'العراق حر',
+    'الراي', 'روتانا خليجية', 'روتانا موسيقى', 'روتانا طرب', 'روتانا كلاسيك',
+    'سبيس تون', 'كرتون نتورك عربية', 'mbc3', 'بسمة', 'نور', 'طيور الجنة',
+    # إضافات مهمة
+    'فورملا', ' formula', 'مونديال', 'world cup', 'كأس', 'دوري', 'champions', 'champions league',
+    'النصر', 'الهلال', 'الاتحاد', 'الأهلي', 'الشباب', 'الاتفاق', 'الوحدة', 'الفيحاء',
+    'الزمالك', 'الأهلي مصر', 'بيراميدز', 'الوداد', 'الرجاء', 'الترجي', 'الصفاقسي'
+]
+
+def is_arabic_or_sports_channel(channel_name):
+    """تفحص إذا كانت القناة عربية أو رياضية مهمة"""
+    if not channel_name:
+        return False
+    name_lower = channel_name.lower()
+    
+    # البحث عن الكلمات المفتاحية
+    for keyword in ARABIC_KEYWORDS:
+        if keyword.lower() in name_lower:
+            return True
+    
+    # التحقق من وجود حروف عربية
+    for char in channel_name:
+        if '\u0600' <= char <= '\u06FF':
+            return True
+    
+    # التحقق من أرقام SSC أو beIN (مثل SSC1, SSC2, beIN1, beIN2...)
+    if 'ssc' in name_lower or 'bein' in name_lower:
+        return True
+    
+    return False
+
 def fetch_live_channels():
-    # إضافة مسار الـ API الصحيح لجلب القنوات
     api_url = f"{HOST}/player_api.php?username={USERNAME}&password={PASSWORD}&action=get_live_streams"
     headers = {'User-Agent': 'Mozilla/5.0 (Android 10; Mobile; rv:91.0) Gecko/91.0 Firefox/91.0'}
     
     print("جاري الاتصال بسيرفر الأكستريم...")
+    print("🎯 البحث عن: SSC, beIN Sports, Alkass, والقنوات العربية...")
+    
     try:
         response = requests.get(api_url, headers=headers, timeout=60)
         if response.status_code != 200:
@@ -31,16 +82,53 @@ def fetch_live_channels():
         raw_data = response.json()
         if isinstance(raw_data, list):
             channels = []
+            arabic_count = 0
+            total_count = 0
+            sports_count = 0
+            
             for ch in raw_data:
-                # التعديل المطلوب: تنسيق الرابط ليصبح رابط بث مباشر قياسي
-                stream_url = f"{HOST}/live/{USERNAME}/{PASSWORD}/{ch.get('stream_id')}.m3u8"
+                total_count += 1
+                channel_name = ch.get('name', '')
                 
-                channels.append({
-                    'name': ch.get('name', 'Unknown'),
-                    'logo': ch.get('stream_icon', ''),
-                    'category': str(ch.get('category_id', 'General')),
-                    'url': stream_url
-                })
+                if is_arabic_or_sports_channel(channel_name):
+                    stream_url = f"{HOST}/live/{USERNAME}/{PASSWORD}/{ch.get('stream_id')}.m3u8"
+                    
+                    # تحديد فئة القناة
+                    category = 'قنوات رياضية'
+                    name_lower = channel_name.lower()
+                    if 'ssc' in name_lower:
+                        category = 'SSC - الرياضية السعودية'
+                    elif 'bein' in name_lower:
+                        category = 'beIN Sports'
+                    elif 'الكاس' in channel_name or 'alkass' in name_lower:
+                        category = 'قنوات الكاس'
+                    elif any(x in name_lower for x in ['sport', 'رياضة', 'koora', 'كورة']):
+                        category = 'رياضة عامة'
+                    elif any(x in name_lower for x in ['news', 'اخبار', 'الجزيرة', 'العربية', 'سكاي']):
+                        category = 'قنوات إخبارية'
+                    else:
+                        category = 'قنوات عربية'
+                    
+                    channels.append({
+                        'name': channel_name,
+                        'logo': ch.get('stream_icon', ''),
+                        'category': category,
+                        'url': stream_url
+                    })
+                    arabic_count += 1
+                    
+                    # إحصاء القنوات الرياضية تحديداً
+                    if 'رياض' in category or 'SSC' in category or 'beIN' in category or 'الكاس' in category:
+                        sports_count += 1
+                    
+                    # طباعة تقدم للقنوات الرياضية المهمة
+                    if 'ssc' in name_lower or 'bein' in name_lower or 'الكاس' in name_lower:
+                        print(f"⭐ تم العثور على قناة رياضية مهمة: {channel_name}")
+            
+            print(f"\n📊 إحصائيات:")
+            print(f"   - إجمالي القنوات في السيرفر: {total_count}")
+            print(f"   - قنوات عربية تم فلترتها: {arabic_count}")
+            print(f"   - منها قنوات رياضية: {sports_count}")
             return channels
         return None
     except Exception as e:
@@ -48,17 +136,20 @@ def fetch_live_channels():
         return None
 
 def encrypt_and_compress_data(data):
-    json_bytes = json.dumps(data).encode('utf-8')
+    json_bytes = json.dumps(data, ensure_ascii=False).encode('utf-8')
     compressed_bytes = gzip.compress(json_bytes)
-    # استخدام التشفير كما هو معتمد في تطبيقك
     cipher = AES.new(SECRET_KEY, AES.MODE_CBC, IV)
     encrypted_bytes = cipher.encrypt(pad(compressed_bytes, AES.block_size))
     return base64.b64encode(encrypted_bytes).decode('utf-8')
 
 # تنفيذ العملية
+print("🚀 بدء تشغيل سكريبت جلب القنوات العربية والرياضية...")
+print("=" * 50)
+
 channels_list = fetch_live_channels()
 if channels_list:
-    print(f"تم جلب {len(channels_list)} قناة. جاري المعالجة والرفع...")
+    print(f"\n✅ تم جلب {len(channels_list)} قناة عربية ورياضية.")
+    print("🔄 جاري التشفير والضغط...")
     
     final_text = encrypt_and_compress_data(channels_list)
     
@@ -70,15 +161,17 @@ if channels_list:
     sha = res.json().get('sha') if res.status_code == 200 else None
     
     payload = {
-        "message": "Update Channels With M3U8 Format",
+        "message": "Update: SSC, beIN Sports, Alkass & Arabic Channels",
         "content": base64.b64encode(final_text.encode('utf-8')).decode('utf-8')
     }
     if sha: payload["sha"] = sha
         
+    print("📤 جاري الرفع إلى GitHub...")
     upload_res = requests.put(url, json=payload, headers=gh_headers)
     if upload_res.status_code in [200, 201]:
-        print("✅ تم تحديث ملف القنوات بنجاح مع الروابط الجديدة.")
+        print("✅ تم تحديث ملف القنوات بنجاح!")
+        print("🎯 القنوات المضمنة: SSC, beIN Sports, Alkass, وجميع القنوات العربية")
     else:
-        print(f"فشل الرفع: {upload_res.text}")
+        print(f"❌ فشل الرفع: {upload_res.text}")
 else:
-    print("❌ تعذر جلب البيانات.")
+    print("❌ تعذر جلب البيانات أو لا توجد قنوات عربية.")
