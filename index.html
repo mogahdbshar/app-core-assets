@@ -2,160 +2,21 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DASTUR.TV - Ultra Performance</title>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-
+    <title>Dastur TV</title>
     <style>
-        :root {
-            --accent-orange: #FF4500;
-            --bg-pure-black: #040405;
-            --surface-glass: rgba(25, 25, 27, 0.45);
-            --border-soft: rgba(255, 255, 255, 0.05);
-            --text-glow: #FFFFFF;
-            --text-muted: #7A7A85;
-            --font-stack: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font-stack); -webkit-tap-highlight-color: transparent; }
-        body { background-color: var(--bg-pure-black); color: var(--text-glow); overflow-x: hidden; padding-bottom: 100px; }
-        
-        #splash-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: #000; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: all 0.4s ease; }
-        .splash-logo { font-size: 32px; font-weight: 900; color: #FFF; letter-spacing: 1.5px; margin-bottom: 20px; }
-        .splash-logo span { color: var(--accent-orange); text-shadow: 0 0 20px rgba(255, 69, 0, 0.6); }
-        .splash-loader-bar { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.05); border-top-color: var(--accent-orange); border-radius: 50%; animation: spin 0.8s linear infinite; }
-        #splash-status { font-size: 11px; color: var(--text-muted); margin-top: 15px; font-weight: bold; text-align: center; padding: 0 20px; line-height: 1.6; }
-        #error-log { margin-top: 10px; font-size: 11px; color: #ff4444; direction: ltr; font-family: monospace; }
-
-        header { position: fixed; top: 0; left: 0; width: 100%; z-index: 100; background: linear-gradient(to bottom, rgba(4,4,5,0.95) 0%, rgba(4,4,5,0) 100%); padding: 20px; display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(5px); }
-        .header-right { display: flex; align-items: center; gap: 12px; }
-        .back-nav-btn { background: var(--surface-glass); border: 1px solid var(--border-soft); width: 34px; height: 34px; border-radius: 50%; display: none; align-items: center; justify-content: center; color: #FFF; border: none; cursor: pointer; }
-        header h1 { font-size: 20px; font-weight: 900; }
-        header h1 span { color: var(--accent-orange); text-shadow: 0 0 15px rgba(255, 69, 0, 0.5); }
-        .user-avatar-btn { background: var(--surface-glass); border: 1px solid var(--border-soft); width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #FFF; border: none; cursor: pointer; }
-
-        .app-page { display: none; width: 100%; animation: slideUpFade 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-        .app-page.active-page { display: block; }
-
-        .video-player-container { width: 100%; background: #000; padding-top: 65px; box-shadow: 0 15px 35px rgba(0,0,0,0.9); position: sticky; top: 0; z-index: 90; }
-        .video-wrapper { width: 100%; aspect-ratio: 16/9.5; background: #000; position: relative; }
-        video { width: 100%; height: 100%; object-fit: contain; }
-
-        .match-bar { margin: 15px 20px; background: var(--surface-glass); border: 1px solid var(--border-soft); border-radius: 14px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(20px); }
-        .match-info-center { text-align: center; flex: 1; }
-        .match-status { font-size: 10px; color: #00FF7F; font-weight: 900; letter-spacing: 0.5px; margin-bottom: 2px; display: block; }
-        .match-time-badge { font-size: 12px; font-weight: 800; color: #FFF; }
-
-        .section-header { font-size: 14px; font-weight: 800; color: #FFF; padding: 0 20px; margin-top: 25px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .section-header span { font-size: 10px; color: var(--text-muted); }
-        
-        .fluid-slider { display: flex; gap: 12px; overflow-x: auto; padding: 5px 20px 15px 20px; scrollbar-width: none; will-change: transform; -webkit-overflow-scrolling: touch; }
-        .fluid-slider::-webkit-scrollbar { display: none; }
-
-        .fluid-card { flex: 0 0 110px; aspect-ratio: 2/2.6; background: var(--surface-glass); border-radius: 14px; border: 1px solid var(--border-soft); position: relative; overflow: hidden; cursor: pointer; transition: transform 0.15s ease; backdrop-filter: blur(10px); display: flex; flex-direction: column; contain: content; }
-        .fluid-card:active { transform: scale(0.96); }
-        .card-visual { width: 100%; height: 68%; display: flex; justify-content: center; align-items: center; position: relative; background: rgba(0, 0, 0, 0.2); overflow: hidden; }
-        .channel-logo-img { width: 100%; height: 100%; object-fit: contain; padding: 8px; content-visibility: auto; }
-        .channel-logo-placeholder { font-size: 24px; color: var(--accent-orange); font-weight: bold; }
-        .card-details { width: 100%; padding: 8px 6px; background: #0A0A0C; text-align: center; border-top: 1px solid rgba(255,255,255,0.02); flex-grow: 1; display: flex; align-items: center; justify-content: center; }
-        .card-details p { font-size: 10.5px; font-weight: 700; color: #FFF; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
-        
-        .card-star-icon { position: absolute; top: 6px; left: 6px; z-index: 5; color: rgba(255,255,255,0.15); cursor: pointer; }
-        .card-star-icon svg { width: 14px; height: 14px; fill: currentColor; }
-        .card-star-icon.active { color: #FFD700; filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.6)); }
-
-        .floating-nav { position: fixed; bottom: 15px; left: 5%; width: 90%; height: 60px; background: rgba(15, 15, 17, 0.85); backdrop-filter: blur(25px); border: 1px solid var(--border-soft); border-radius: 20px; display: flex; justify-content: space-around; align-items: center; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
-        .nav-tab { display: flex; flex-direction: column; align-items: center; color: var(--text-muted); font-size: 10px; font-weight: bold; cursor: pointer; transition: all 0.2s ease; gap: 4px; }
-        .nav-tab .nav-icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; }
-        .nav-tab.active-tab { color: #FFF; }
-        .nav-tab.active-tab .nav-icon { color: var(--accent-orange); transform: translateY(-2px); filter: drop-shadow(0 0 8px rgba(255,69,0,0.5)); }
-
-        .page-title-panel { padding: 85px 20px 10px 20px; font-size: 18px; font-weight: 900; border-bottom: 1px solid var(--border-soft); }
-        .fluid-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 12px; padding: 20px; padding-bottom: 120px; }
-        
-        .dev-profile-card { background: linear-gradient(135deg, rgba(255, 69, 0, 0.08) 0%, rgba(20, 20, 22, 0.6) 100%); border: 1px solid rgba(255, 69, 0, 0.3); border-radius: 16px; padding: 20px; margin: 85px 20px 20px 20px; text-align: center; backdrop-filter: blur(10px); }
-        .dev-avatar-glow { width: 65px; height: 65px; background: rgba(255, 69, 0, 0.1); border: 2px solid var(--accent-orange); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--accent-orange); margin: 0 auto 12px auto; box-shadow: 0 0 20px rgba(255, 69, 0, 0.3); }
-        .dev-avatar-glow svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; }
-        .dev-name { font-size: 16px; font-weight: 900; color: #FFF; }
-        .dev-title { font-size: 11px; color: var(--accent-orange); font-weight: bold; margin-bottom: 15px; }
-        .dev-social-box { display: flex; justify-content: center; gap: 12px; }
-        .dev-btn { background: rgba(255,255,255,0.03); border: 1px solid var(--border-soft); color: #FFF; font-size: 12px; font-weight: bold; padding: 8px 16px; border-radius: 8px; text-decoration: none; display: flex; align-items: center; gap: 8px; }
-
-        @keyframes slideUpFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        body { background: #121212; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
+        #loader { margin-top: 50px; font-size: 1.2em; }
+        .channel-list { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 20px; }
+        .channel-item { background: #1e1e1e; padding: 15px; border-radius: 8px; border: 1px solid #333; }
     </style>
 </head>
 <body>
 
-    <div id="splash-screen">
-        <div class="splash-logo">DASTUR<span>.TV</span></div>
-        <div class="splash-loader-bar"></div>
-        <div id="splash-status">جاري تهيئة النظام السريع...</div>
-        <div id="error-log"></div>
-    </div>
+    <div id="loader">جاري تهيئة النظام...</div>
+    <div id="channel-container" class="channel-list"></div>
 
-    <header>
-        <div class="header-right">
-            <button id="back-button" class="back-nav-btn" onclick="goBackFluid()">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
-            </button>
-            <h1>DASTUR<span>.TV</span></h1>
-        </div>
-        <button class="user-avatar-btn" onclick="switchFluidPage('settings')">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-        </button>
-    </header>
-
-    <div id="page-home" class="app-page active-page">
-        <div class="video-player-container">
-            <div class="video-wrapper">
-                <video id="live-player" controls poster="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=700&auto=format&fit=crop" playsinline></video>
-            </div>
-        </div>
-
-        <div class="match-bar">
-            <div class="match-info-center">
-                <span class="match-status" id="match-live-tag">DASTUR PREMIUM</span>
-                <div class="match-time-badge" id="match-details-display">اختر باقة أو قناة من الأسفل لبدء البث الفوري المباشر</div>
-            </div>
-        </div>
-
-        <div id="dynamic-sections-container"></div>
-    </div>
-
-    <div id="page-favorites" class="app-page">
-        <div class="page-title-panel">قائمتي المفضلة</div>
-        <div class="fluid-grid" id="favorites-container"></div>
-    </div>
-
-    <div id="page-settings" class="app-page">
-        <div class="dev-profile-card">
-            <div class="dev-avatar-glow">
-                <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
-            </div>
-            <div class="dev-name">محمد الدستور</div>
-            <div class="dev-title">مطور ومؤسس منصة DASTUR.TV</div>
-            <div class="dev-social-box">
-                <a href="https://instagram.com/ds.r6" target="_blank" class="dev-btn">انستغرام</a>
-                <a href="mailto:support@dastur.tv" class="dev-btn">الدعم الفني</a>
-            </div>
-        </div>
-    </div>
-
-    <div class="floating-nav">
-        <div class="nav-tab active-tab" onclick="switchFluidPage('home')">
-            <div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg></div>الرئيسية
-        </div>
-        <div class="nav-tab" onclick="switchFluidPage('favorites')">
-            <div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></div>المفضلة
-        </div>
-        <div class="nav-tab" onclick="switchFluidPage('settings')">
-            <div class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></div>الإعدادات
-        </div>
-    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
 
     <script>
         const CONFIG = {
@@ -164,255 +25,40 @@
             IV: "16BytesLongIV!!!"
         };
 
-        let allChannels = [];
-        let favorites = JSON.parse(localStorage.getItem('dastur_favs')) || [];
-        let navigationHistory = ['home'];
-        let hlsInstance = null;
-
-        function waitForLibs(cb) {
-            const check = setInterval(() => {
-                if (window.CryptoJS && window.pako) {
-                    clearInterval(check);
-                    cb();
-                }
-            }, 50);
-        }
-
-        window.onload = () => waitForLibs(loadAndDecryptData);
-
-        function showUIError(msg) {
-            document.getElementById("error-log").innerText = "❌ Error: " + msg;
-            console.error("Critical Runtime Error:", msg);
-        }
-
-        async function loadAndDecryptData() {
-            const statusText = document.getElementById('splash-status');
-            
+        async function init() {
             try {
-                statusText.innerText = "1 - الاتصال بالسيرفر الفوري...";
+                const response = await fetch(CONFIG.DATA_URL);
+                const encrypted = await response.text();
                 
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 15000);
-
-                const response = await fetch(CONFIG.DATA_URL, { signal: controller.signal });
-                clearTimeout(timeout);
-
-                if (!response.ok) throw new Error(`HTTP STATUS ${response.status}`);
-                
-                const encryptedBase64 = await response.text();
-                if (!encryptedBase64 || encryptedBase64.length < 20) throw new Error("EMPTY_DATA");
-
-                statusText.innerText = "2 - فك تشفير الحزم الفاخرة...";
-                
+                // فك التشفير
                 const key = CryptoJS.enc.Utf8.parse(CONFIG.SECRET_KEY);
                 const iv = CryptoJS.enc.Utf8.parse(CONFIG.IV);
+                const decrypted = CryptoJS.AES.decrypt(encrypted.trim(), key, { iv: iv });
                 
-                const decryptedBytes = CryptoJS.AES.decrypt(encryptedBase64.trim(), key, { 
-                    iv: iv, 
-                    mode: CryptoJS.mode.CBC, 
-                    padding: CryptoJS.pad.Pkcs7 
-                });
+                // تحويل لـ Uint8Array لفك الضغط
+                const binary = atob(decrypted.toString(CryptoJS.enc.Base64));
+                const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
                 
-                const binaryString = CryptoJS.enc.Latin1.stringify(decryptedBytes);
-                if (!binaryString) throw new Error("DECRYPTION_FAILED");
+                // فك الضغط
+                const jsonText = pako.ungzip(bytes, { to: 'string' });
+                const channels = JSON.parse(jsonText);
 
-                statusText.innerText = "3 - فك الضغط الذكي واستخلاص الحجم...";
+                document.getElementById('loader').innerText = "تم التحميل بنجاح!";
                 
-                const binaryData = new Uint8Array([...binaryString].map(c => c.charCodeAt(0)));
-                let jsonText = pako.ungzip(binaryData, { to: "string" });
-
-                if (!jsonText) throw new Error("EMPTY_TEXT_PROCESSED");
-
-                statusText.innerText = "4 - تنظيم المجموعات والسرعة...";
-                allChannels = JSON.parse(jsonText);
-
-                // إطلاق البناء المجدول خفيف الوزن فوراً
-                renderAppSectionsLazy();
-
-                setTimeout(() => {
-                    const splash = document.getElementById('splash-screen');
-                    splash.style.opacity = '0';
-                    setTimeout(() => splash.style.display = 'none', 400);
-                }, 400);
-
-            } catch (error) {
-                showUIError(error.message);
-                statusText.innerText = "فشل بدء المنصة";
-            }
-        }
-
-        /* 🔥 تعديل الأداء الجذري: جدولة بناء الأقسام (Lazy / Chunked rendering) لمنع تجميد المتصفح */
-        function renderAppSectionsLazy() {
-            const container = document.getElementById('dynamic-sections-container');
-            container.innerHTML = '';
-
-            // تجميع القنوات في باقات داخل الذاكرة أولاً دون لمس واجهة العرض
-            const sections = {};
-            allChannels.forEach(ch => {
-                const cat = ch.category || "باقات عامة منوعة";
-                if (!sections[cat]) sections[cat] = [];
-                sections[cat].push(ch);
-            });
-
-            const keys = Object.keys(sections);
-            let index = 0;
-
-            // بناء باقة تلو الأخرى بفارق زمن ميكروسكوبي يريح الـ CPU
-            function buildNextSection() {
-                if (index >= keys.length) return;
-
-                const sectionTitle = keys[index];
-                const channelsInSection = sections[sectionTitle];
-
-                const sectionHeader = document.createElement('div');
-                sectionHeader.className = 'section-header';
-                sectionHeader.innerHTML = `${sectionTitle} <span>قناة: ${channelsInSection.length}</span>`;
-                container.appendChild(sectionHeader);
-
-                const slider = document.createElement('div');
-                slider.className = 'fluid-slider';
-
-                // حقن كروت هذه الباقة فقط
-                channelsInSection.forEach(ch => {
-                    slider.appendChild(createChannelCard(ch));
+                // عرض أول 50 قناة فقط لتجنب التعليق
+                const container = document.getElementById('channel-container');
+                channels.slice(0, 50).forEach(ch => {
+                    const div = document.createElement('div');
+                    div.className = 'channel-item';
+                    div.innerText = ch.name || "قناة بدون اسم";
+                    container.appendChild(div);
                 });
 
-                container.appendChild(slider);
-                index++;
-
-                // استخدام آلي لجدولة الباقة التالية دون حجز خيط المعالجة الرئيسي
-                if (window.requestIdleCallback) {
-                    window.requestIdleCallback(buildNextSection);
-                } else {
-                    setTimeout(buildNextSection, 10);
-                }
-            }
-
-            buildNextSection();
-        }
-
-        function createChannelCard(ch) {
-            const card = document.createElement('div');
-            card.className = 'fluid-card';
-            const isFav = favorites.some(f => f.url === ch.url);
-            
-            // استخدام مرجع نصي مخفف للاستدعاء لتخفيف وزن العناصر
-            card.innerHTML = `
-                <div class="card-star-icon ${isFav ? 'active' : ''}" onclick="toggleFavorite(event, '${btoa(encodeURIComponent(ch.url))}')">
-                    <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-                </div>
-                <div class="card-visual" onclick="startLiveStream('${ch.url}', '${ch.name.replace(/'/g, "\\'")}')">
-                    ${ch.logo ? `<img class="channel-logo-img" src="${ch.logo}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">` : ''}
-                    <div class="channel-logo-placeholder" style="${ch.logo ? 'display:none;' : 'display:block;'}">${ch.name ? ch.name.charAt(0) : 'TV'}</div>
-                </div>
-                <div class="card-details" onclick="startLiveStream('${ch.url}', '${ch.name.replace(/'/g, "\\'")}')">
-                    <p>${ch.name || 'قناة بدون اسم'}</p>
-                </div>
-            `;
-            return card;
-        }
-
-        /* 🔥 تم دمج بصمة التشغيل المطلوبة هنا */
-        function startLiveStream(streamUrl, channelName) {
-            const video = document.getElementById('live-player');
-            const matchDetailsDisplay = document.getElementById('match-details-display');
-
-            switchFluidPage('home');
-            if (matchDetailsDisplay) { matchDetailsDisplay.innerText = `جاري البث: ${channelName}`; }
-            
-            // تصفير وتهيئة المشغل القديم بالكامل لتحرير الرام فوراً
-            if (hlsInstance) {
-                hlsInstance.stopLoad();
-                hlsInstance.detachMedia();
-                hlsInstance.destroy();
-                hlsInstance = null;
-            }
-
-            video.pause();
-            video.removeAttribute('src');
-            video.load();
-
-            if (Hls.isSupported()) {
-                hlsInstance = new Hls({
-                    xhrSetup: function(xhr, url) {
-                        xhr.setRequestHeader('User-Agent', 'IPTVSmarters/1.0.0');
-                        xhr.setRequestHeader('Referer', 'http://12k-service.org/');
-                    },
-                    maxBufferLength: 6,
-                    maxMaxBufferLength: 10,
-                    backBufferLength: 4,
-                    enableWorker: true,
-                    lowLatencyMode: true,
-                    abrEwmaDefaultEstimate: 5000000
-                });
-                hlsInstance.loadSource(streamUrl);
-                hlsInstance.attachMedia(video);
-                hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-                    video.play().catch(() => {});
-                });
-                
-                hlsInstance.on(Hls.Events.ERROR, function (event, data) {
-                    if (data.fatal) {
-                        switch (data.type) {
-                            case Hls.ErrorTypes.NETWORK_ERROR:
-                                hlsInstance.startLoad();
-                                break;
-                            case Hls.ErrorTypes.MEDIA_ERROR:
-                                hlsInstance.recoverMediaError();
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-                });
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = streamUrl;
-                video.addEventListener('loadedmetadata', () => {
-                    video.play().catch(() => {});
-                });
+            } catch (e) {
+                document.getElementById('loader').innerText = "خطأ: " + e.message;
             }
         }
-
-        function toggleFavorite(event, base64Url) {
-            event.stopPropagation();
-            const decodedUrl = decodeURIComponent(atob(base64Url));
-            const ch = allChannels.find(c => c.url === decodedUrl);
-            if(!ch) return;
-
-            const index = favorites.findIndex(f => f.url === ch.url);
-            if (index > -1) {
-                favorites.splice(index, 1);
-                event.currentTarget.classList.remove('active');
-            } else {
-                favorites.push(ch);
-                event.currentTarget.classList.add('active');
-            }
-            localStorage.setItem('dastur_favs', JSON.stringify(favorites));
-        }
-
-        function switchFluidPage(pageName, isBackAction = false) {
-            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active-tab'));
-            document.querySelectorAll('.app-page').forEach(page => page.classList.remove('active-page'));
-            
-            const pageMap = { 'home': 0, 'favorites': 1, 'settings': 2 };
-            const activeIndex = pageMap[pageName] !== undefined ? pageMap[pageName] : 0;
-            
-            document.getElementById(`page-${pageName}`).classList.add('active-page');
-            document.querySelectorAll('.floating-nav .nav-tab')[activeIndex].classList.add('active-tab');
-
-            if (!isBackAction && navigationHistory[navigationHistory.length - 1] !== pageName) {
-                navigationHistory.push(pageName);
-            }
-            document.getElementById('back-button').style.display = navigationHistory.length > 1 ? 'flex' : 'none';
-        }
-
-        function goBackFluid() {
-            if (navigationHistory.length > 1) {
-                navigationHistory.pop(); 
-                switchFluidPage(navigationHistory[navigationHistory.length - 1], true);
-            }
-        }
+        init();
     </script>
 </body>
-              </html>
-
+</html>
