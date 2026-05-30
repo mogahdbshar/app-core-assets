@@ -16,76 +16,51 @@ FILE_PATH = "system_config.dat"
 SECRET_KEY = b'MySecretKeyForIPTVChannels4000!!'
 IV = b'16BytesLongIV!!!'
 
-# قائمة الأولويات للقنوات العربية (من الأعلى إلى الأسفل)
-def get_channel_category(name):
-    name_lower = name.lower()
-    
-    # 1. بي إن سبورت (beIN)
-    if 'bein' in name_lower or 'be in' in name_lower:
-        if 'hd' in name_lower or '1080' in name_lower or '720' in name_lower:
-            return 'بي إن سبورت - HD'
-        else:
-            return 'بي إن سبورت - SD'
-    
-    # 2. SSC
-    if 'ssc' in name_lower:
-        if 'hd' in name_lower or '1080' in name_lower or '720' in name_lower:
-            return 'SSC - HD'
-        else:
-            return 'SSC - SD'
-    
-    # 3. MBC
-    if 'mbc' in name_lower:
-        if 'hd' in name_lower or '1080' in name_lower or '720' in name_lower:
-            return 'MBC - HD'
-        else:
-            return 'MBC - SD'
-    
-    # 4. شاهد (Shahid)
-    if 'shahid' in name_lower:
-        if 'hd' in name_lower or '1080' in name_lower or '720' in name_lower:
-            return 'شاهد - HD'
-        else:
-            return 'شاهد - SD'
-    
-    # 5. نتفلكس (Netflix)
-    if 'netflix' in name_lower:
-        if 'hd' in name_lower or '1080' in name_lower or '720' in name_lower:
-            return 'نتفلكس - HD'
-        else:
-            return 'نتفلكس - SD'
-    
-    # 6. قنوات عربية مهمة (روتانا، ART، قنوات دراما، إلخ)
-    important_keywords = ['rotana', 'art', 'دراما', 'drama', 'مسلسلات', 'افلام', 'cinema', 
-                          'mbc masr', 'mbc egypt', 'mbc iraq', 'mbc plus', 'mbc action',
-                          'mbc max', 'mbc drama', 'mbc 1', 'mbc 2', 'mbc 3', 'mbc 4',
-                          'al jazeera', 'al arabiya', 'sky news arabia', 'cnbc arabia',
-                          'التلفزيون العربي', 'سورية', 'العراقية', 'المصرية', 'السعودية',
-                          'الجزيرة', 'العربية', 'العلم', 'الإخبارية']
-    
-    for keyword in important_keywords:
-        if keyword in name_lower:
-            if 'hd' in name_lower or '1080' in name_lower or '720' in name_lower:
-                return 'قنوات عربية مهمة - HD'
-            else:
-                return 'قنوات عربية مهمة - SD'
-    
-    # 7. باقي القنوات العربية
-    # نفحص إذا كان الاسم يحتوي على أحرف عربية
-    arabic_chars = set('ابتثجحخدذرزسشصضطظعغفقكلمنهويءآأؤإة')
-    has_arabic = any(char in name for char in arabic_chars)
-    
-    if has_arabic:
-        if 'hd' in name_lower or '1080' in name_lower or '720' in name_lower:
-            return 'قنوات عربية متنوعة - HD'
-        else:
-            return 'قنوات عربية متنوعة - SD'
-    
-    # 8. القنوات الأجنبية
-    if 'hd' in name_lower or '1080' in name_lower or '720' in name_lower:
-        return 'قنوات أجنبية - HD'
+def detect_quality(name):
+    """تحديد جودة القناة بناءً على الاسم"""
+    name_upper = name.upper()
+    if '4K' in name_upper or 'UHD' in name_upper:
+        return '4K'
+    elif 'FHD' in name_upper or 'FULL HD' in name_upper:
+        return 'FHD'
+    elif 'HD' in name_upper:
+        return 'HD'
+    elif 'SD' in name_upper:
+        return 'SD'
     else:
-        return 'قنوات أجنبية - SD'
+        return 'SD'  # الافتراضي
+
+def is_arabic_channel(channel_data):
+    """التحقق إذا كانت القناة عربية (بوجود AR أو أحرف عربية)"""
+    # البحث عن AR في جميع قيم القناة (كحقل منفصل أو داخل الاسم)
+    for key, value in channel_data.items():
+        if isinstance(value, str) and 'AR' in value.upper():
+            return True
+    
+    # البحث عن أحرف عربية في الاسم
+    name = channel_data.get('name', '')
+    arabic_chars = set('ابتثجحخدذرزسشصضطظعغفقكلمنهويءآأؤإة')
+    if any(char in name for char in arabic_chars):
+        return True
+    
+    return False
+
+def get_channel_category(channel_data):
+    """تحديد فئة القناة بناءً على العربية والجودة"""
+    name = channel_data.get('name', '')
+    quality = detect_quality(name)
+    is_arabic = is_arabic_channel(channel_data)
+    
+    if is_arabic:
+        if quality in ['4K', 'FHD', 'HD']:
+            return 'قنوات عربية - HD'
+        else:
+            return 'قنوات عربية - SD'
+    else:
+        if quality in ['4K', 'FHD', 'HD']:
+            return 'قنوات عالمية - HD'
+        else:
+            return 'قنوات عالمية - SD'
 
 def fetch_and_categorize_channels():
     api_url = f"{HOST}/player_api.php?username={USERNAME}&password={PASSWORD}&action=get_live_streams"
@@ -106,63 +81,56 @@ def fetch_and_categorize_channels():
         
         # تجميع القنوات حسب الفئات
         categories = {}
+        arabic_count = 0
+        world_count = 0
         
         for ch in raw_data:
-            name = ch.get('name', 'Unknown')
-            category_name = get_channel_category(name)
-            
             channel_data = {
-                'name': name,
+                'name': ch.get('name', 'Unknown'),
                 'logo': ch.get('stream_icon', ''),
                 'url': f"{HOST}/live/{USERNAME}/{PASSWORD}/{ch.get('stream_id')}.m3u8"
             }
             
+            category_name = get_channel_category(channel_data)
+            
             if category_name not in categories:
                 categories[category_name] = []
             categories[category_name].append(channel_data)
+            
+            if 'عربية' in category_name:
+                arabic_count += 1
+            else:
+                world_count += 1
         
-        # بناء قائمة الباقات النهائية (مرتبة حسب الأهمية)
+        # ترتيب الباقات (العربية أولاً)
         final_packages = []
         
-        # ترتيب الباقات المطلوب ظهورها في التطبيق
-        order = [
-            'بي إن سبورت - HD',
-            'بي إن سبورت - SD',
-            'SSC - HD',
-            'SSC - SD',
-            'MBC - HD',
-            'MBC - SD',
-            'شاهد - HD',
-            'شاهد - SD',
-            'نتفلكس - HD',
-            'نتفلكس - SD',
-            'قنوات عربية مهمة - HD',
-            'قنوات عربية مهمة - SD',
-            'قنوات عربية متنوعة - HD',
-            'قنوات عربية متنوعة - SD',
-            'قنوات أجنبية - HD',
-            'قنوات أجنبية - SD'
-        ]
+        # ترتيب محدد للأولوية
+        priority_order = ['قنوات عربية - HD', 'قنوات عربية - SD', 'قنوات عالمية - HD', 'قنوات عالمية - SD']
         
-        for cat_name in order:
+        for cat_name in priority_order:
             if cat_name in categories:
+                # ترتيب القنوات داخل الباقة أبجدياً
+                categories[cat_name].sort(key=lambda x: x['name'])
                 final_packages.append({
-                    'id': cat_name.replace(' ', '_').replace('-', '').replace('__', '_'),
+                    'id': cat_name.replace(' ', '_').replace('-', ''),
                     'name': cat_name,
                     'channels': categories[cat_name]
                 })
                 print(f"- {cat_name}: {len(categories[cat_name])} قناة")
+                del categories[cat_name]
         
-        # إضافة أي باقات أخرى لم يتم ترتيبها
+        # إضافة أي باقات أخرى (لن يحدث عادة)
         for cat_name, channels in categories.items():
-            if cat_name not in order:
-                final_packages.append({
-                    'id': cat_name.replace(' ', '_').replace('-', '').replace('__', '_'),
-                    'name': cat_name,
-                    'channels': channels
-                })
-                print(f"- {cat_name}: {len(channels)} قناة (إضافية)")
+            channels.sort(key=lambda x: x['name'])
+            final_packages.append({
+                'id': cat_name.replace(' ', '_').replace('-', ''),
+                'name': cat_name,
+                'channels': channels
+            })
+            print(f"- {cat_name}: {len(channels)} قناة (إضافية)")
         
+        print(f"\nملخص: {arabic_count} قناة عربية, {world_count} قناة عالمية")
         return final_packages
         
     except Exception as e:
@@ -192,7 +160,7 @@ if packages_list:
     sha = res.json().get('sha') if res.status_code == 200 else None
     
     payload = {
-        "message": "تصنيف القنوات: beIN, SSC, MBC, Shahid, Netflix, مهمة, متنوعة - مع فصل HD/SD",
+        "message": "تصنيف القنوات حسب AR وجودة (HD/SD/4K/FHD) مع الأولوية للعربية",
         "content": base64.b64encode(final_text.encode('utf-8')).decode('utf-8')
     }
     if sha:
@@ -201,6 +169,9 @@ if packages_list:
     upload_res = requests.put(url, json=payload, headers=gh_headers)
     if upload_res.status_code in [200, 201]:
         print("✅ تم تحديث ملف القنوات بنجاح.")
+        print("   - قنوات عربية - HD: تظهر أولاً")
+        print("   - قنوات عربية - SD: تظهر ثانياً")
+        print("   - ثم القنوات العالمية")
     else:
         print(f"❌ فشل الرفع: {upload_res.text}")
 else:
