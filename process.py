@@ -16,6 +16,20 @@ FILE_PATH = "system_config.dat"
 SECRET_KEY = b'MySecretKeyForIPTVChannels4000!!' 
 IV = b'16BytesLongIV!!!'
 
+# كلمات للتصنيف الذكي
+ARABIC_KEYWORDS = ['AR', 'beIN', 'SSC', 'الكأس', 'الرياضية', 'أبوظبي', 'كأس العالم', 'العراق', 'الأردن']
+MOVIES_KEYWORDS = ['MOVIES', 'SERIES', 'FILM', 'أفلام', 'مسلسلات']
+
+def classify_channel(name, category):
+    combined = (str(name) + " " + str(category)).upper()
+    for kw in ARABIC_KEYWORDS:
+        if kw.upper() in combined:
+            return 1, True
+    for kw in MOVIES_KEYWORDS:
+        if kw.upper() in combined:
+            return -1, False
+    return 0, False
+
 def fetch_live_channels():
     api_url = f"{HOST}/player_api.php?username={USERNAME}&password={PASSWORD}&action=get_live_streams"
     headers = {'User-Agent': 'Mozilla/5.0 (Android 10; Mobile; rv:91.0) Gecko/91.0 Firefox/91.0'}
@@ -32,11 +46,18 @@ def fetch_live_channels():
             channels = []
             for ch in raw_data:
                 stream_url = f"{HOST}/live/{USERNAME}/{PASSWORD}/{ch.get('stream_id')}.m3u8"
+                channel_name = ch.get('name', 'Unknown')
+                category_name = ch.get('category_name', str(ch.get('category_id', 'General')))
+                priority, is_arabic = classify_channel(channel_name, category_name)
+                
                 channels.append({
-                    'name': ch.get('name', 'Unknown'),
+                    'name': channel_name,
                     'logo': ch.get('stream_icon', ''),
-                    'category': str(ch.get('category_id', 'General')),
-                    'url': stream_url
+                    'category': category_name,
+                    'url': stream_url,
+                    'priority': priority,
+                    'is_arabic': is_arabic,
+                    'match_info': ''
                 })
             return channels
         return None
@@ -45,7 +66,7 @@ def fetch_live_channels():
         return None
 
 def encrypt_and_compress_data(data):
-    json_bytes = json.dumps(data).encode('utf-8')
+    json_bytes = json.dumps(data, ensure_ascii=False).encode('utf-8')
     compressed_bytes = gzip.compress(json_bytes)
     cipher = AES.new(SECRET_KEY, AES.MODE_CBC, IV)
     encrypted_bytes = cipher.encrypt(pad(compressed_bytes, AES.block_size))
@@ -59,7 +80,6 @@ if __name__ == "__main__":
         
         final_text = encrypt_and_compress_data(channels_list)
         
-        # إعدادات الرفع إلى GitHub
         url = f"https://api.github.com/repos/{REPO}/contents/{FILE_PATH}"
         gh_headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
         
