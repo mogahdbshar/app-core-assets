@@ -32,15 +32,23 @@ def classify_channel(name, category):
 
 def fetch_live_channels():
     api_url = f"{HOST}/player_api.php?username={USERNAME}&password={PASSWORD}&action=get_live_streams"
-    headers = {'User-Agent': 'Mozilla/5.0 (Android 10; Mobile; rv:91.0) Gecko/91.0 Firefox/91.0'}
     
+    # الرؤوس المطلوبة من المصدر (هذا هو التعديل الوحيد)
+    required_headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': HOST,
+        'Origin': HOST
+    }
+    
+    headers = {'User-Agent': 'Mozilla/5.0 (Android 10; Mobile; rv:91.0) Gecko/91.0 Firefox/91.0'}
+
     print("جاري الاتصال بسيرفر الأكستريم...")
     try:
         response = requests.get(api_url, headers=headers, timeout=60)
         if response.status_code != 200:
             print(f"فشل الاتصال: {response.status_code}")
             return None
-            
+
         raw_data = response.json()
         if isinstance(raw_data, list):
             channels = []
@@ -49,7 +57,7 @@ def fetch_live_channels():
                 channel_name = ch.get('name', 'Unknown')
                 category_name = ch.get('category_name', str(ch.get('category_id', 'General')))
                 priority, is_arabic = classify_channel(channel_name, category_name)
-                
+
                 channels.append({
                     'name': channel_name,
                     'logo': ch.get('stream_icon', ''),
@@ -57,7 +65,8 @@ def fetch_live_channels():
                     'url': stream_url,
                     'priority': priority,
                     'is_arabic': is_arabic,
-                    'match_info': ''
+                    'match_info': '',
+                    'required_headers': required_headers  # إضافة الرؤوس لكل قناة
                 })
             return channels
         return None
@@ -77,22 +86,22 @@ if __name__ == "__main__":
     channels_list = fetch_live_channels()
     if channels_list:
         print(f"تم جلب {len(channels_list)} قناة. جاري المعالجة والرفع...")
-        
+
         final_text = encrypt_and_compress_data(channels_list)
-        
+
         url = f"https://api.github.com/repos/{REPO}/contents/{FILE_PATH}"
         gh_headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
-        
+
         res = requests.get(url, headers=gh_headers)
         sha = res.json().get('sha') if res.status_code == 200 else None
-        
+
         payload = {
             "message": "Update Channels With M3U8 Format",
             "content": base64.b64encode(final_text.encode('utf-8')).decode('utf-8')
         }
         if sha: 
             payload["sha"] = sha
-            
+
         upload_res = requests.put(url, json=payload, headers=gh_headers)
         if upload_res.status_code in [200, 201]:
             print("✅ تم تحديث ملف القنوات بنجاح مع الروابط الجديدة.")
